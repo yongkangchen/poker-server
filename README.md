@@ -1,10 +1,10 @@
 # poker-server
 
-install brew (optional): https://brew.sh
+1、安装luajit
+https://luapower.com/luajit/download
 
-Only for osx yet, please install luajit via: `brew install luajit`
-
-usage: `luajit lib/main.lua 9878 zzmj`
+2、启动服务器
+`luajit lib/main.lua 9878 zzmj`
 
 
 http://linkcloud.github.io/
