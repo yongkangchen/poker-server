@@ -92,7 +92,7 @@ local function create_client(client_fd, ip, port)
 			error("[disconnected]: "..(fd or "nil"))
 			return
 		end
-		read_buf = read_buf .. ffi.string(data)
+		read_buf = read_buf .. ffi.string(data, n)
 	end
 
 	local client = {

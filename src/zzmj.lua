@@ -120,7 +120,7 @@ local function set_init_msg(player, data)
     data.pre_out_role = player.room.pre_out_role == player
 end
 
-local function create_room(player, type, horse, peng_hu, seven_hu, can_pao, horse_type)
+local function create_room(player, horse, peng_hu, seven_hu, can_pao, horse_type)
     if not HORSE_TBL[horse] then
         LERR("create_room failed, invalid horse: %d, pid: %d", horse, player.id)
         return
@@ -139,13 +139,11 @@ local function create_room(player, type, horse, peng_hu, seven_hu, can_pao, hors
         create_data = {
             horse = horse,
             seven_hu = seven_hu,
-            type = type,
             can_pao = can_pao,
             qianggang_hu = true,
         },
         start_idx = 1,
         can_out = false,
-        type = type,
     }
 end
 
@@ -371,11 +369,6 @@ local function ROOM_MSG_REG(pt, func)
             return
         end
         
-        local room_type = room.type
-        if room_type ~= "hongzhong" and room_type ~= "zhuanzhuan" then
-            LERR("room msg failed, pt: 0x%08x, invalid room type: %s, pid: %d", pt, room_type, player.id)
-            return
-        end
         func(room, player, ...)
     end
 end
@@ -420,11 +413,9 @@ end)
 
 ROOM_MSG_REG(msg.ZZ_HU, function(room, player, is_pao)
     local gang_score_count = 0
-    if room.type == "zhuanzhuan" then
-        for _, v in ipairs(player.info.extra) do
-            if v.num == 4 then
-                gang_score_count = gang_score_count + 1
-            end
+    for _, v in ipairs(player.info.extra) do
+        if v.num == 4 then
+            gang_score_count = gang_score_count + 1
         end
     end
     
