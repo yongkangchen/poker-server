@@ -107,3 +107,11 @@ function string:split(_sep)
     self:gsub(pattern, function(c) fields[#fields+1] = c end)
     return fields
 end
+
+function table.merge(dst, src)
+    for k, v in pairs(src) do
+        dst[k] = v
+    end
+    return dst
+end
+
