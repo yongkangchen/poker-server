@@ -204,7 +204,7 @@ local function end_game(room, ...)
     end
 end
 
-MSG_REG[msg.CREATE] = function(player, _, money_type, num, ...)    
+MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)    
     if num ~= game.BASE_ROUND and num ~= game.BASE_ROUND * 2 and (not game.BASE_COUNT or num ~= game.BASE_ROUND * 3) then
         LERR("create_room failed, invalid num: %d, pid: %d", num, player.id)
         return
@@ -240,7 +240,7 @@ MSG_REG[msg.CREATE] = function(player, _, money_type, num, ...)
     room.one_result = {}
     room.dismiss_tbl = {}
     room.dismiss_time = nil
-    room.money_type = money_type
+    room.money_type = type(create_tbl) == "table" and create_tbl.money_type or create_tbl
 
     room.broadcast = broadcast
     room.broadcast_all = broadcast_all
