@@ -20,6 +20,7 @@ local timer = require "timer"
 local game
 local game_name
 local game_id = GAME_ID
+local push_msg
 
 local ROOM_MAX_ID = 999999
 local room_tbl = {}
@@ -247,6 +248,7 @@ MSG_REG[msg.CREATE] = function(player, _, money_type, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
+    room.push_msg = push_msg
 
     player.room = room
     player.game_id = game_id
@@ -645,7 +647,8 @@ MSG_REG[msg.GET_ROOM] = function(player)
     player:send(msg.GET_ROOM, room:get_data())
 end
 
-return function(_game_name)
+return function(_game_name, _push_msg)
     game_name = _game_name
+    push_msg = _push_msg
     game = require(game_name)
 end

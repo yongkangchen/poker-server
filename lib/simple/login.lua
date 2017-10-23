@@ -83,3 +83,16 @@ MSG_REG[msg.LOGIN] = function(client, pid)
 	player:send(msg.LOGIN, get_player_data(player), {}, "", false)
     LLOG("login success, pid: %s", pid)
 end
+
+return function(pt, player_id_tbl, ...)
+	if type(player_id_tbl) ~= "table" then
+		player_id_tbl = {player_id_tbl}
+	end
+	
+	for _, player_id in pairs(player_id_tbl) do
+		local player = player_tbl[player_id]
+		if player and player.client then
+			player:send(pt, ...)
+		end
+	end
+end

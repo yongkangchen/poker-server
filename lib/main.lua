@@ -50,8 +50,8 @@ math.randomseed(os.time())
 
 MSG_REG = MSG_REG or { }
 
-require "login"
-require "room"(game_name)
+local push_msg = require "login"
+require "room"(game_name, push_msg)
 
 local function msg_handle(agent, pt, ...)
 	local func = MSG_REG[ pt ]
