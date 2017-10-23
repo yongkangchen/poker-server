@@ -248,7 +248,6 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
-    room.push_msg = push_msg
 
     player.room = room
     player.game_id = game_id
