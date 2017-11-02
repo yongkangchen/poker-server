@@ -112,6 +112,9 @@ local function start_game(room)
     room.gaming = true
     game.start_room(room)
     init_playback(room)
+    if room.host.refusal_tbl then
+        room.host.refusal_tbl = nil
+    end
 end
 
 local function end_game(room, ...)
@@ -334,7 +337,7 @@ MSG_REG[msg.START_GAME] = function(player)
         LERR("start game failed, ready_count < 2, room_id: %d, pid: %d", room.id, player.id)
         return
     end
-
+    
     start_game(room)
 end
 
@@ -465,6 +468,12 @@ MSG_REG[msg.RENTER] = function(player)
     end
  
     game.renter(room, player)
+
+    if player.refusal_tbl then
+        for _, tbl in pairs(player.refusal_tbl) do
+            player:send(msg.REFUSE_INVITE, tbl.name, tbl.type)
+        end
+    end
     
     LLOG("re enter room success, room_id: %d, pid: %d", room.id, player.id)
 end
@@ -542,6 +551,10 @@ MSG_REG[msg.DISMISS] = function(player)
     if room.host ~= player then
         LERR("is not room host by player: %d", player.id)
         return
+    end
+    
+    if player.refusal_tbl then
+        player.refusal_tbl = nil
     end
     
     room:broadcast(msg.DISMISS)
