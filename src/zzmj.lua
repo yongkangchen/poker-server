@@ -691,6 +691,6 @@ return {
     renter = renter,
     get_result = get_result,
     start_room = start_room,
-    
     set_init_msg = set_init_msg,
+    open_xufang = true,
 }

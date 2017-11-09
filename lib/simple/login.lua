@@ -13,6 +13,7 @@ of this license document, but changing it is not allowed.
 
 local msg = require "msg"
 local log = require "log"
+local xufang = require "xufang"
 
 local LERR = log.error
 local LLOG = log.log
@@ -79,9 +80,10 @@ MSG_REG[msg.LOGIN] = function(client, pid)
 	
 	player.client = client
 	client.agent = player
-
+	
 	player:send(msg.LOGIN, get_player_data(player), {}, "", false)
     LLOG("login success, pid: %s", pid)
+	xufang.login(player)
 end
 
 return function(pt, player_id_tbl, ...)
