@@ -16,6 +16,7 @@ local log = require "log"
 local LERR = log.error
 local LLOG = log.log
 local timer = require "timer"
+local xufang = require "xufang"
 
 local game
 local game_name
@@ -112,6 +113,7 @@ local function start_game(room)
     room.gaming = true
     game.start_room(room)
     init_playback(room)
+    xufang.delete_data(room.host)
 end
 
 local function end_game(room, ...)
@@ -200,6 +202,9 @@ local function end_game(room, ...)
     room.mid_players = {}
 
     if is_over then
+        if game.open_xufang then
+            xufang.save_data(room)
+        end
         room:delete()
     end
 end
@@ -466,6 +471,8 @@ MSG_REG[msg.RENTER] = function(player)
  
     game.renter(room, player)
     
+    xufang.renter(player)
+    
     LLOG("re enter room success, room_id: %d, pid: %d", room.id, player.id)
 end
 
@@ -543,6 +550,8 @@ MSG_REG[msg.DISMISS] = function(player)
         LERR("is not room host by player: %d", player.id)
         return
     end
+
+    xufang.delete_data(player)
     
     room:broadcast(msg.DISMISS)
     room:delete()

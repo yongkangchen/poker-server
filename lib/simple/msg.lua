@@ -63,4 +63,8 @@ return {
     
     UPLOAD_VOICE = 0x1011,
     PLAY_VOICE = 0x1012,
+    
+    INVITE_PLAYER = 0x0040,
+    REFUSE_INVITE = 0x0041, 
+    AGREE_INVITE = 0x0042, 
 }
