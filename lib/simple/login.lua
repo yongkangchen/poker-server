@@ -98,6 +98,16 @@ local function clear_push_msg()
 end
 clear_push_msg()
 
+MSG_REG[msg.COMFIRM_MSG] = function(player, pt, ...)
+	local player_id = player.id
+	local push_msg = push_msg_dict[player_id]
+	if not push_msg then
+		return
+	end
+	push_msg_dict[player_id] = nil
+	MSG_REG[pt](player, ...)
+end
+
 local g_pid = 35450
 MSG_REG[msg.LOGIN] = function(client, pid)
 	if client.agent ~= client then
