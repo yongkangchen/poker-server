@@ -13,6 +13,7 @@ of this license document, but changing it is not allowed.
 
 local msg = require "msg"
 local log = require "log"
+local timer = require "timer"
 
 local LERR = log.error
 local LLOG = log.log
@@ -59,6 +60,44 @@ local function load_player(pid)
 	return player
 end
 
+local push_msg_dict = {}
+
+local function do_push_msg(player_id)
+	local push_msg = push_msg_dict[player_id]
+	if not push_msg then
+		return
+	end
+	
+    local player = player_tbl[player_id]
+	
+	local timeout = push_msg[1]
+	if timeout < os.time() then
+		push_msg_dict[player_id] = nil
+		local pt = push_msg[2]
+		MSG_REG[pt](player, false, unpack(push_msg, 3, table.maxn(push_msg)))
+		return
+	end
+	
+	if player and player.client then
+		player:send(unpack(push_msg, 2, table.maxn(push_msg)))
+	end
+end
+
+local function clear_push_msg()
+	timer.add_timeout(10, function()
+		local cur_time = os.time()
+		for id, push_msg in pairs(push_msg_dict) do
+			if push_msg[1] < cur_time then
+				push_msg_dict[id] = nil
+				local pt = push_msg[2]
+				MSG_REG[pt](player_tbl[id], false, unpack(push_msg, 3, table.maxn(push_msg)))
+			end
+		end
+		clear_push_msg()
+	end)
+end
+clear_push_msg()
+
 local g_pid = 35450
 MSG_REG[msg.LOGIN] = function(client, pid)
 	if client.agent ~= client then
@@ -79,20 +118,19 @@ MSG_REG[msg.LOGIN] = function(client, pid)
 	
 	player.client = client
 	client.agent = player
-
+	
 	player:send(msg.LOGIN, get_player_data(player), {}, "", false)
+	do_push_msg(player.id)
     LLOG("login success, pid: %s", pid)
 end
 
-return function(pt, player_id_tbl, ...)
+return function(player_id_tbl, timeout, pt, ...)
 	if type(player_id_tbl) ~= "table" then
 		player_id_tbl = {player_id_tbl}
 	end
 	
 	for _, player_id in pairs(player_id_tbl) do
-		local player = player_tbl[player_id]
-		if player and player.client then
-			player:send(pt, ...)
-		end
+		push_msg_dict[player_id] = {timeout, pt, ...}
+		do_push_msg(player_id)
 	end
 end

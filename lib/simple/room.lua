@@ -200,7 +200,50 @@ local function end_game(room, ...)
     room.mid_players = {}
 
     if is_over then
+        local id_tbl = {}
+        for _, role in pairs(room.players) do
+            if role.id ~= room.host.id then
+                table.insert(id_tbl, role.id)
+            end
+        end
+
+        room.host:send(msg.ROOM_CONTINUE, id_tbl, room.create_params, room.id)
         room:delete()
+    end
+end
+
+MSG_REG[msg.ROOM_CONTINUE] = function(player, id_tbl, up_room_id)
+    local room = player.room
+    if not room then
+        return
+    end
+    
+    local room_id = room.id
+    local create_time = room.create_time
+    for _, id in pairs(id_tbl) do
+        push_msg(id, os.time() + 60, msg.ROOM_INVITE, room_id, create_time, up_room_id)
+    end
+end
+
+MSG_REG[msg.ROOM_INVITE] = function(player, accept, room_id, create_time)
+    local room = room_tbl[room_id]
+    if not room then
+        player:send(msg.HINT, "房间已解散！")
+        return
+    end
+    
+    if room.create_time ~= create_time then
+        LLOG("invalid create_time: %s", tostring(room.host.id))
+        return
+    end
+    
+    if room.start_count > 0 then
+        return
+    end
+    
+    if not accept then
+        push_msg(room.host.id, os.time() + 180, msg.HINT, player.name .. "拒绝了你的邀请！")
+        LLOG("not accept: %s", tostring(room.host.id))
     end
 end
 
@@ -248,6 +291,8 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
+    room.create_params = {num, ...}
+    room.create_time = os.time()
 
     player.room = room
     player.game_id = game_id
