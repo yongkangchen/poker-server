@@ -105,7 +105,9 @@ MSG_REG[msg.COMFIRM_MSG] = function(player, pt, ...)
 		return
 	end
 	push_msg_dict[player_id] = nil
-	MSG_REG[pt](player, ...)
+	if pt ~= 69 then
+		MSG_REG[pt](player, ...)
+	end
 end
 
 local g_pid = 35450
