@@ -172,10 +172,22 @@ local function create_server(addr, port)
 	end
 end
 
+local function loop()
+	local pre_time = os.time()
+	while true do
+		local cur_time = os.time()
+		local timeout = timer.update(cur_time - pre_time)
+		pre_time  = cur_time
+		
+		poll_obj.wait(timeout)
+	end
+end
+
 return {
 	connect = function(addr, port)
 		return create_client(tcp_connect(addr, port))
 	end,
+	loop = loop,
 	start = function(addr, port, on_accept)
 		local accept = create_server(addr, port)
 		coroutine.wrap(function()
@@ -187,8 +199,6 @@ return {
 			end
 		end)()
 		
-		while true do
-			poll_obj.wait(timer.update())
-		end
+		loop()
 	end
 }
