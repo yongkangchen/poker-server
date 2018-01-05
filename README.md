@@ -25,6 +25,7 @@ COST_ALL：AA开房模式的局数对应的钻石消耗
 
 禁止使用以下函数：
 ```
+print
 collectgarbage 
 dofile 
 getfenv 
