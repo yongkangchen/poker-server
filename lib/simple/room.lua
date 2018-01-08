@@ -295,7 +295,7 @@ MSG_REG[msg.READY] = function(player, is_ready)
 
     if ready_count == room.player_size then
         start_game(room)
-    elseif CAN_MID_ENTER and room.round > 1 and ready_count == table.length(room.players) then
+    elseif game.CAN_MID_ENTER and room.round > 1 and ready_count == table.length(room.players) then
         start_game(room)
     end
 
@@ -365,11 +365,11 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
         return
     end
     
-    if not CAN_MID_ENTER then
+    if not game.CAN_MID_ENTER then
         is_mid_enter = nil
     end
 
-    if CAN_MID_ENTER and room.start_count > 0 and is_mid_enter == nil then
+    if game.CAN_MID_ENTER and room.start_count > 0 and is_mid_enter == nil then
         local room_data = {
             room_id = room_id,
             names = {},
