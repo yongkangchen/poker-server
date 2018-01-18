@@ -17,6 +17,13 @@ local LERR = log.error
 local LLOG = log.log
 local timer = require "timer"
 
+local visit = require "visit"
+local broadcast_visit = visit.broadcast_visit
+local get_visit_info = visit.get_visit_info
+local clean_visit_role = visit.clean_visit_role
+local add_visit_role = visit.add_visit_role
+local del_visit_role = visit.del_visit_role
+
 local game
 local game_name
 local game_id = GAME_ID
@@ -28,6 +35,11 @@ local function broadcast(room, ...)
     for _, role in pairs(room.players) do
         role:send(...)
     end
+    
+    if game.CAN_VISIT then
+        broadcast_visit(room, nil, ...)
+    end
+    
     if room.playback then
         table.insert(room.playback, table.dump{...})
     end
@@ -40,12 +52,13 @@ local function broadcast_all(room, ...)
     end
 end
 
-local function init_msg(player, distance, idx, is_zhuang)
+local function init_msg(player, distance, idx, is_zhuang, is_visit)
     local player_info = player.info
     local hand = player_info.hand
-    if distance ~= 0 and hand then
+    if hand and (distance ~= 0 or is_visit) then   --客户端判断会导致可以看牌
         hand = #hand
     end
+    
     local data = {
         id = player.id, 
         name = player.name,
@@ -54,10 +67,11 @@ local function init_msg(player, distance, idx, is_zhuang)
         sex = player.sex,
         hand = hand,
         out = player_info.out,
-        is_ready = player_info.is_ready,
+        is_ready = is_ready,
         score = player_info.result.total_score,
         is_zhuang = is_zhuang,
         is_mid_enter = player_info.is_mid_enter,
+        is_visit = is_visit
     }
     
     local set_init_msg = game.set_init_msg
@@ -67,7 +81,7 @@ local function init_msg(player, distance, idx, is_zhuang)
     return msg.INIT, data, distance
 end
 
-local function get_room_data(room)
+local function get_room_data(room, is_visit)
     local data = room.create_data
     if data then
         data = table.copy(data)
@@ -82,7 +96,7 @@ local function get_room_data(room)
     data.start_count = room.start_count
     data.game_name = game_name
     data.gaming = room.gaming
-
+    data.is_visit = is_visit
     if game.init_room_data then
         game.init_room_data(room, data)
     end
@@ -91,6 +105,7 @@ local function get_room_data(room)
 end
 
 local function delete_room(room)
+    clean_visit_role(room, room.is_dismiss and msg.DISMISS or nil)
     for _, role in pairs(room.players) do
         role.room = nil
     end
@@ -195,9 +210,8 @@ local function end_game(room, ...)
             role:send(msg.DISMISS)
         end
     end
-
+    
     room.mid_players = {}
-
     if is_over then
         room:delete()
     end
@@ -225,7 +239,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     while room_tbl[room_gid] do
         room_gid = math.random(100000, ROOM_MAX_ID)
     end
-
+    
     room_tbl[room_gid] = room
 
     room.id = room_gid
@@ -234,6 +248,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.players = {player}
     room.ready_count = 0
     room.mid_players = {}
+    room.visit_players = {}
     room.start_count = 0
     room.host = player
     room.one_result = {}
@@ -337,7 +352,7 @@ MSG_REG[msg.START_GAME] = function(player)
     start_game(room)
 end
 
-MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
+MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     if player.room then
         LERR("enter room failed, already in room: %d, pid: %d", player.room.id, player.id)
         player:send(msg.ENTER, 1)
@@ -351,24 +366,32 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
         return
     end
     
+    if not game.CAN_VISIT then
+        is_visit = nil
+    end
+    
     --NOTE: player_size和max_player_size区别
     local count = table.length(room.players) + table.length(room.mid_players)
     if count >= room.player_size then
-        LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
-        player:send(msg.ENTER, 3)
-        return
+        if not (game.CAN_VISIT and is_visit) then
+            LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
+            player:send(msg.ENTER, 3)
+            return
+        end
     end
-
+    
     if room.max_player_size and count >= room.max_player_size then
-        LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
-        player:send(msg.ENTER, 4)
-        return
+        if not (game.CAN_VISIT and is_visit) then
+            LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
+            player:send(msg.ENTER, 4)
+            return
+        end
     end
     
     if not game.CAN_MID_ENTER then
         is_mid_enter = nil
     end
-
+                
     if game.CAN_MID_ENTER and room.start_count > 0 and is_mid_enter == nil then
         local room_data = {
             room_id = room_id,
@@ -389,7 +412,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
         player:send(msg.MID_ENTER, room_data)
         return
     end 
-
+    
     if not is_mid_enter and room.gaming then
         LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
         player:send(msg.ENTER, 6)
@@ -397,40 +420,43 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
     end
     
     local idx
-    for i = 1, room.player_size do
-        if room.players[i] == nil then
-            if not is_mid_enter or not room.gaming then
-                idx = i
-                room.players[i] = player
-                break
-            elseif room.mid_players[i] == nil then
-                idx = i
-                room.mid_players[i] = player
-                break
+    if not is_visit then
+        for i = 1, room.player_size do
+            if room.players[i] == nil then
+                if not is_mid_enter or not room.gaming then
+                    idx = i
+                    room.players[i] = player
+                    break
+                elseif room.mid_players[i] == nil then
+                    idx = i
+                    room.mid_players[i] = player
+                    break
+                end
             end
         end
+        player.info = game.create_info(nil, room)
+        player.info.is_mid_enter = is_mid_enter
+        player.room = room
+        player.game_id = game_id
+    else
+        add_visit_role(player, room)
+        idx = 1
     end
-    
-    player.info = game.create_info(nil, room)
-    player.info.is_mid_enter = is_mid_enter
-    player.room = room
-    player.game_id = game_id
-    player:send(msg.ENTER, room:get_data())
+    player:send(msg.ENTER, room:get_data(is_visit))
     
     for i, role in pairs(room.players) do
-        if role ~= player then
+        if role ~= player and not is_visit then
             role:send(init_msg(player, idx - i, idx))
         end
-        player:send(init_msg(role, i - idx, i))
+        player:send(init_msg(role, i - idx, i, is_visit))
     end
     
     for i, role in pairs(room.mid_players) do
-        if role ~= player then
+        if role ~= player and not is_visit then
             role:send(init_msg(player, idx - i, idx))
         end
-        player:send(init_msg(role, i - idx, i))
+        player:send(init_msg(role, i - idx, i, is_visit))
     end
-    
     LLOG("enter room success, room_id: %d, pid: %d", room_id, player.id)
 end
 
@@ -448,23 +474,23 @@ MSG_REG[msg.RENTER] = function(player)
     else
         idx = table.index(room.players, player)
     end
-
+    idx = idx == nil and 1 or idx
+    
     for i, role in pairs(room.players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, get_visit_info(player)))
     end
 
     for i, role in pairs(room.mid_players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, get_visit_info(player)))
     end
 
-    room:broadcast_all(msg.OFFLINE, player.id, "")
-
-    if room.dismiss_time ~= nil then
-        player:send(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time())
+    if not get_visit_info(player) then
+        room:broadcast_all(msg.OFFLINE, player.id, "")
+        if room.dismiss_time ~= nil then
+            player:send(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time())
+        end
+        game.renter(room, player)
     end
- 
-    game.renter(room, player)
-    
     LLOG("re enter room success, room_id: %d, pid: %d", room.id, player.id)
 end
 
@@ -547,13 +573,18 @@ MSG_REG[msg.DISMISS] = function(player)
     room:delete()
 end
 
-MSG_REG[msg.ROOM_OUT] = function(player)
+MSG_REG[msg.ROOM_OUT] = function(player, is_visit)
     local room = player.room
     if not room then
         LERR("room is not exist by player: %d", player.id)
         return
     end
- 
+    
+    if is_visit then
+        del_visit_role(player)
+        return
+    end    
+        
     if room.start_count > 0 then
         LERR("room:%d game is ready", room.id)
         return
