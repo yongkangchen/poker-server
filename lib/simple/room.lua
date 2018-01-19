@@ -373,7 +373,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     --NOTE: player_size和max_player_size区别
     local count = table.length(room.players) + table.length(room.mid_players)
     if count >= room.player_size then
-        if not (game.CAN_VISIT and is_visit) then
+        if not game.CAN_VISIT then
             LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
             player:send(msg.ENTER, 3)
             return
@@ -381,7 +381,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     end
     
     if room.max_player_size and count >= room.max_player_size then
-        if not (game.CAN_VISIT and is_visit) then
+        if not game.CAN_VISIT then
             LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
             player:send(msg.ENTER, 4)
             return
