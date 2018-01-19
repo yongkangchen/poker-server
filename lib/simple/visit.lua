@@ -26,16 +26,18 @@ function visit.clean(room, is_dismiss)
     room.visit_players = {}
 end
 
-function visit.add_visit_role(player, room)
-    for i = 1, room.player_size * 4 do
+function visit.add_role(player, room)
+    local i = 1
+    while true do
         if room.visit_players[i] == nil then
             room.visit_players[i] = player
             break
         end
+        i = i + 1
     end
 end
 
-function visit.del_visit_role(player)
+function visit.del_role(player)
     local room = player.room
     local idx = visit.check(player)
     if not idx then

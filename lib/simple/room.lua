@@ -21,8 +21,8 @@ local visit = require "visit"
 local visit_broadcast = visit.broadcast
 local visit_check = visit.check
 local visit_clean = visit.clean
-local add_visit_role = visit.add_visit_role
-local del_visit_role = visit.del_visit_role
+local visit_add_role = visit.add_role
+local visit_del_role = visit.del_role
 local visit_is_full = visit.is_full
 
 local game
@@ -444,7 +444,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
             return
         end
         idx = 1
-        add_visit_role(player, room)
+        visit_add_role(player, room)
     elseif is_ask then
         send_ask(room, player, ask_data)
         return
@@ -616,7 +616,7 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
 
-    if del_visit_role(player) then
+    if visit_del_role(player) then
         return
     end
 
