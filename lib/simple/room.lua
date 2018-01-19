@@ -79,7 +79,6 @@ local function init_msg(player, distance, idx, is_zhuang, is_visit)
     return msg.INIT, data, distance
 end
 
---TODO: 客户端is_visitor的标志
 local function get_room_data(room)
     local data = room.create_data
     if data then
@@ -362,12 +361,12 @@ local function should_ask(room)
         can_mid_enter = not is_full
     end
 
-    local can_visitor = game.CAN_VISIT and not visit_is_full(room)
+    local can_visit = game.CAN_VISIT and not visit_is_full(room)
 
     local ask_data
-    if can_visitor or can_mid_enter then
+    if can_visit or can_mid_enter then
         ask_data = {
-            can_visitor = can_visitor,
+            can_visit = can_visit,
             can_mid_enter = can_mid_enter
         }
     end
@@ -439,7 +438,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         player.info = game.create_info(nil, room)
         player.info.is_mid_enter = true
     elseif is_visit then
-        if ask_data == nil or not ask_data.can_visitor then
+        if ask_data == nil or not ask_data.can_visit then
             player:send(msg.ENTER, 4)
             return
         end
@@ -474,7 +473,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     player.room = room
     player.game_id = game_id
 
-    player:send(msg.ENTER, room:get_data())
+    player:send(msg.ENTER, room:get_data(), visit.check(player))
 
     for i, role in pairs(room.players) do
         if role ~= player then
@@ -708,7 +707,7 @@ MSG_REG[msg.GET_ROOM] = function(player)
         return
     end
 
-    player:send(msg.GET_ROOM, room:get_data())
+    player:send(msg.GET_ROOM, room:get_data(), visit.check(player))
 end
 
 return function(_game_name, _game_path)
