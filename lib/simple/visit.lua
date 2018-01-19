@@ -1,9 +1,15 @@
-local visit = {}
+local visit = {
+    MAX_NUM = 20,
+}
 
 function visit.broadcast_visit(room, ...)
     for _, role in pairs(room.visit_players) do
         role:send(...)
     end
+end
+
+function visit.is_full(room)
+    return table.length(room.visit_players) >= visit.MAX_NUM
 end
 
 function visit.get_visit_info(player)
@@ -27,7 +33,6 @@ function visit.add_visit_role(player, room)
             break
         end
     end
-    player.room = room
 end
 
 function visit.del_visit_role(player)

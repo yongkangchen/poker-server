@@ -23,6 +23,7 @@ local get_visit_info = visit.get_visit_info
 local clean_visit_role = visit.clean_visit_role
 local add_visit_role = visit.add_visit_role
 local del_visit_role = visit.del_visit_role
+local visit_is_full = visit.is_full
 
 local game
 local game_name
@@ -349,6 +350,54 @@ MSG_REG[msg.START_GAME] = function(player)
     start_game(room)
 end
 
+local function should_ask(room)
+    local is_full
+    local count = table.length(room.players) + table.length(room.mid_players)
+    if count >= room.player_size or (room.max_player_size and count >= room.max_player_size) then
+        is_full = true
+    end
+
+    local can_mid_enter = false
+    if game.CAN_MID_ENTER then
+        can_mid_enter = not is_full
+    end
+
+    local can_visitor = game.CAN_VISIT and not visit_is_full(room)
+
+    local ask_data
+    if can_visitor or can_mid_enter then
+        ask_data = {
+            can_visitor = can_visitor,
+            can_mid_enter = can_mid_enter
+        }
+    end
+
+    if ask_data and (room.start_count > 0 or is_full) then
+        return true, ask_data, is_full
+    end
+    return false, ask_data, is_full
+end
+
+local function send_ask(room, player, ask_data)
+    local room_data = {
+        room_id = room.id,
+        names = {},
+    }
+
+    room_data.round_count = room.max_round - room.start_count
+
+    room_data.need_cash = 0
+    for _, role in pairs(room.players) do
+        table.insert(room_data.names, role.name)
+    end
+
+    for _, role in pairs(room.mid_players) do
+        table.insert(room_data.names, role.name)
+    end
+
+    player:send(msg.MID_ENTER, room_data, ask_data)
+end
+
 MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     if player.room then
         LERR("enter room failed, already in room: %d, pid: %d", player.room.id, player.id)
@@ -367,76 +416,64 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         is_visit = nil
     end
 
-    if not is_visit then
-        --NOTE: player_size和max_player_size区别
-        local count = table.length(room.players) + table.length(room.mid_players)
-        if count >= room.player_size then
-            LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
-            player:send(msg.ENTER, 3)
-            return
-        end
-
-        if room.max_player_size and count >= room.max_player_size then
-            LLOG("enter room failed, already full room_id: %d, pid: %d", room_id, player.id)
-            player:send(msg.ENTER, 4)
-            return
-        end
-    end
-
     if not game.CAN_MID_ENTER then
         is_mid_enter = nil
     end
 
-    if game.CAN_MID_ENTER and room.start_count > 0 and is_mid_enter == nil then
-        local room_data = {
-            room_id = room_id,
-            names = {},
-        }
-
-        room_data.round_count = room.max_round - room.start_count
-
-        room_data.need_cash = 0
-        for _, role in pairs(room.players) do
-            table.insert(room_data.names, role.name)
-        end
-
-        for _, role in pairs(room.mid_players) do
-            table.insert(room_data.names, role.name)
-        end
-
-        player:send(msg.MID_ENTER, room_data)
-        return
-    end
-
-    if not is_mid_enter and room.gaming then --TODO: 观战可以中途加入
-        LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
-        player:send(msg.ENTER, 6)
-        return
-    end
-
+    local is_ask, ask_data, is_full = should_ask(room)
     local idx
-    if not is_visit then
+    if is_mid_enter then
+        if ask_data == nil or not ask_data.can_mid_enter then
+            player:send(msg.ENTER, 4)
+            return
+        end
+
         for i = 1, room.player_size do
-            if room.players[i] == nil then
-                if not is_mid_enter or not room.gaming then
-                    idx = i
-                    room.players[i] = player
-                    break
-                elseif room.mid_players[i] == nil then
-                    idx = i
-                    room.mid_players[i] = player
-                    break
-                end
+            if room.players[i] == nil and room.mid_players[i] == nil then
+                idx = i
+                room.mid_players[i] = player
+                break
             end
         end
+
         player.info = game.create_info(nil, room)
-        player.info.is_mid_enter = is_mid_enter
-        player.room = room
-        player.game_id = game_id
-    else
-        add_visit_role(player, room)
+        player.info.is_mid_enter = true
+    elseif is_visit then
+        if ask_data == nil or not ask_data.can_visitor then
+            player:send(msg.ENTER, 4)
+            return
+        end
         idx = 1
+        add_visit_role(player, room)
+    elseif is_ask then
+        send_ask(room, player, ask_data)
+        return
+    else
+        if is_full then
+            player:send(msg.ENTER, 4)
+            return
+        end
+
+        if room.gaming then
+            LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
+            player:send(msg.ENTER, 6)
+            return
+        end
+
+        for i = 1, room.player_size do
+            if room.players[i] == nil then
+                idx = i
+                room.players[i] = player
+                break
+            end
+        end
+
+        player.info = game.create_info(nil, room)
     end
+
+    player.room = room
+    player.game_id = game_id
+
     player:send(msg.ENTER, room:get_data())
 
     for i, role in pairs(room.players) do
