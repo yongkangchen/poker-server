@@ -2,7 +2,7 @@ local visit = {
     MAX_NUM = 20,
 }
 
-function visit.broadcast_visit(room, ...)
+function visit.broadcast(room, ...)
     for _, role in pairs(room.visit_players) do
         role:send(...)
     end
@@ -12,11 +12,11 @@ function visit.is_full(room)
     return table.length(room.visit_players) >= visit.MAX_NUM
 end
 
-function visit.get_visit_info(player)
+function visit.check(player)
     return table.index(player.room.visit_players, player)
 end
 
-function visit.clean_visit_role(room, is_dismiss)
+function visit.clean(room, is_dismiss)
     for _, role in pairs(room.visit_players) do
         if is_dismiss then
             role:send(is_dismiss)
@@ -37,7 +37,7 @@ end
 
 function visit.del_visit_role(player)
     local room = player.room
-    local idx = visit.get_visit_info(player)
+    local idx = visit.check(player)
     if not idx then
         return
     end

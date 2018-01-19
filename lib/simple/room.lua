@@ -18,9 +18,9 @@ local LLOG = log.log
 local timer = require "timer"
 
 local visit = require "visit"
-local broadcast_visit = visit.broadcast_visit
-local get_visit_info = visit.get_visit_info
-local clean_visit_role = visit.clean_visit_role
+local visit_broadcast = visit.broadcast
+local visit_check = visit.check
+local visit_clean = visit.clean
 local add_visit_role = visit.add_visit_role
 local del_visit_role = visit.del_visit_role
 local visit_is_full = visit.is_full
@@ -37,7 +37,7 @@ local function broadcast(room, ...)
         role:send(...)
     end
 
-    broadcast_visit(room, ...)
+    visit_broadcast(room, ...)
 
     if room.playback then
         table.insert(room.playback, table.dump{...})
@@ -103,7 +103,7 @@ local function get_room_data(room)
 end
 
 local function delete_room(room)
-    clean_visit_role(room, room.is_dismiss and msg.DISMISS or nil)
+    visit_clean(room, room.is_dismiss and msg.DISMISS or nil)
     for _, role in pairs(room.players) do
         role.room = nil
     end
@@ -507,7 +507,7 @@ MSG_REG[msg.RENTER] = function(player)
         idx = table.index(room.players, player)
     end
 
-    local is_visit = get_visit_info(player)
+    local is_visit = visit_check(player)
     if is_visit then
         idx = 1
     end
