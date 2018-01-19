@@ -500,15 +500,15 @@ MSG_REG[msg.RENTER] = function(player)
     end
 
     local idx
-    if player.info.is_mid_enter then
-        idx = table.index(room.mid_players, player)
-    else
-        idx = table.index(room.players, player)
-    end
-
     local is_visit = visit_check(player)
     if is_visit then
         idx = 1
+    else
+        if player.info.is_mid_enter then
+            idx = table.index(room.mid_players, player)
+        else
+            idx = table.index(room.players, player)
+        end
     end
 
     for i, role in pairs(room.players) do
