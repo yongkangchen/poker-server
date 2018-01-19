@@ -13,7 +13,9 @@ function visit.is_full(room)
 end
 
 function visit.check(player)
-    return table.index(player.room.visit_players, player)
+    if table.index(player.room.visit_players, player) then
+        return player.room.players[1].id
+    end
 end
 
 function visit.clean(room, is_dismiss)
@@ -39,7 +41,7 @@ end
 
 function visit.del_role(player)
     local room = player.room
-    local idx = visit.check(player)
+    local idx = table.index(player.room.visit_players, player)
     if not idx then
         return
     end
