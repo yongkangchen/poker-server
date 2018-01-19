@@ -25,8 +25,6 @@ local function get_player_data(player)
 		id = player.id,
 		name = player.name,
 		sex = player.sex,
-		cash_num = 0,
-		coin_num = 0,
 		room_id = player.room and player.room.id or nil,
 	}
 end
@@ -60,7 +58,7 @@ local function load_player(pid)
 end
 
 local g_pid = 35450
-MSG_REG[msg.LOGIN] = function(client, pid)
+MSG_REG[msg.LOGIN] = function(client, pid, ...)
 	if client.agent ~= client then
 		LERR("repeat login, account pid : %s", client.agent.id)
 		return
@@ -79,20 +77,10 @@ MSG_REG[msg.LOGIN] = function(client, pid)
 	
 	player.client = client
 	client.agent = player
+	if test_on_login then
+		test_on_login(player, ...)
+	end
 
 	player:send(msg.LOGIN, get_player_data(player), {}, "", false)
     LLOG("login success, pid: %s", pid)
-end
-
-return function(pt, player_id_tbl, ...)
-	if type(player_id_tbl) ~= "table" then
-		player_id_tbl = {player_id_tbl}
-	end
-	
-	for _, player_id in pairs(player_id_tbl) do
-		local player = player_tbl[player_id]
-		if player and player.client then
-			player:send(pt, ...)
-		end
-	end
 end
