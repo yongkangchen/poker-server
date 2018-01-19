@@ -1,30 +1,23 @@
 local visit = {}
 
-function visit.broadcast_visit(room, skip_msg, ...)
-    local args = {...}
-    if args[1] == skip_msg then
-        return
-    end
-    for _, role in pairs(room.visit_players or {}) do
+function visit.broadcast_visit(room, ...)
+    for _, role in pairs(room.visit_players) do
         role:send(...)
     end
 end
 
 function visit.get_visit_info(player)
-    if player.info then
-        return player.info.is_visit
-    end
+    return table.index(player.room.visit_players, player)
 end
 
 function visit.clean_visit_role(room, is_dismiss)
-    for _, role in pairs(room.visit_players or {}) do
+    for _, role in pairs(room.visit_players) do
         if is_dismiss then
             role:send(is_dismiss)
         end
         role.room = nil
-        role.info.visit = nil
     end
-    room.visit_players = nil
+    room.visit_players = {}
 end
 
 function visit.add_visit_role(player, room)
@@ -34,21 +27,18 @@ function visit.add_visit_role(player, room)
             break
         end
     end
-    player.info = {}
-    player.info.visit = true
     player.room = room
-end    
-    
+end
+
 function visit.del_visit_role(player)
     local room = player.room
-    for idx, role in pairs(room.visit_players or {}) do
-        if role == player then
-            room.visit_players[idx] = nil
-            break
-        end
+    local idx = visit.get_visit_info(player)
+    if not idx then
+        return
     end
+    room.visit_players[idx] = nil
     player.room = nil
-    player.info.visit = nil
+    return true
 end
 
 return visit
