@@ -13,10 +13,10 @@ of this license document, but changing it is not allowed.
 local so_folder = jit.os
 local so_type = jit.os == "Windows" and "/?.dll" or "/?.so"
 if jit.os == "Windows" then
-    so_folder = so_folder .. jit.arch..so_type
+    so_folder = so_folder .. jit.arch
 end
 
-package.cpath = package.cpath .. ";./libc/" .. so_folder
+package.cpath = package.cpath .. ";./libc/" .. so_folder .. so_type
 package.path = package.path .. ";./lib/?.lua;./lib/net/?.lua;./src/?.lua;./lib/lobby/?.lua;./lib/lobby/lib/?.lua;./lib/simple/?.lua;"
 
 math.randomseed(os.time())
