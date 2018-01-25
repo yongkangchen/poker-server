@@ -13,9 +13,7 @@ function visit.is_full(room)
 end
 
 function visit.check(player)
-    if table.index(player.room.visit_players, player) then
-        return player.room.players[1].id
-    end
+    return table.index(player.room.visit_players, player)
 end
 
 function visit.clean(room, is_dismiss)
@@ -24,6 +22,7 @@ function visit.clean(room, is_dismiss)
             role:send(is_dismiss)
         end
         role.room = nil
+        role.visit_size = nil
     end
     room.visit_players = {}
 end
@@ -37,14 +36,20 @@ function visit.add_role(player, room)
         end
         i = i + 1
     end
+    player.room = room  --一个room_id 的字段也可以
+    player.visit_size = #room.players
 end
 
-function visit.del_role(player)
+function visit.del_role(player, is_room_out)
     local room = player.room
-    local idx = table.index(player.room.visit_players, player)
+    local idx = visit.check(player)
     if not idx then
         return
     end
+    if is_room_out then
+        player.visit_size = nil
+    end
+    
     room.visit_players[idx] = nil
     player.room = nil
     return true
