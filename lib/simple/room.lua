@@ -24,6 +24,7 @@ local visit_clean = visit.clean
 local visit_add_role = visit.add_role
 local visit_del_role = visit.del_role
 local visit_is_full = visit.is_full
+local visit_player_size = visit.player_size
 
 local game
 local game_name
@@ -51,7 +52,7 @@ local function broadcast_all(room, ...)
     end
 end
 
-local function init_msg(player, distance, idx, is_zhuang, is_visit)
+local function init_msg(player, distance, idx, is_zhuang, is_visit, visit_sit_down)
     local player_info = player.info
     local hand = player_info.hand
     if (hand and distance ~= 0) or is_visit then   --客户端判断会导致可以看牌
@@ -76,7 +77,8 @@ local function init_msg(player, distance, idx, is_zhuang, is_visit)
     if set_init_msg then
         set_init_msg(player, data, player.room)
     end
-    return msg.INIT, data, distance
+    
+    return msg.INIT, data, distance, visit_sit_down
 end
 
 local function get_room_data(room)
@@ -259,15 +261,9 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
-    
-    local host_start
-    if game.CAN_VISIT_ENTER then   --创建选项判断
-    --if game.CAN_VISIT_ENTER and create_tbl.host_start then
-        room.host_start = true
-    end
-    player:send(msg.CREATE, room:get_data(), room.host_start)  --这个可以不需要，客户端那边可以判断
+    player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
 
-    if not room.host_start then
+    if not room.create_data.host_start then
         player.game_id = game_id
         player.room = room
         room.players = {player}
@@ -315,7 +311,7 @@ MSG_REG[msg.READY] = function(player, is_ready)
     room.ready_count = ready_count
 
     room:broadcast(msg.READY, player.id, is_ready, ready_count)
-
+    
     if ready_count == room.player_size then
         start_game(room)
     elseif game.CAN_VISIT_ENTER and room.round > 1 and ready_count == table.length(room.players) then
@@ -367,62 +363,137 @@ local function room_is_full(room)
     end
 end
 
-local function can_visit_enter(player, room, visit_enter)
-    local is_visit = true
-    if not game.CAN_VISIT_ENTER or visit_enter then
-        is_visit = nil
-    end
-    
-    local is_full
-    if is_visit then
-        is_full = visit_is_full(room)
-    else 
-        if room.gaming and not visit_enter then
-            LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
-            player:send(msg.ENTER, 6)
-            return false
-        end
-        is_full = room_is_full(room)
-    end
-    if is_full then
-        player:send(msg.ENTER, 4)
-        return false
-    end
-    return true, is_visit
-end
-
 local function send_visit_init(player, room)
     visit_add_role(player, room)
-    local idx = -(table.length(room.players) + table.length(room.mid_players))
-    local distance
     
-    for i, role in pairs(room.players) do
-        --假设y是玩家位置表，x表示进入房间时的玩家总数，y[x]表示进入房间时，玩家人数对应的座位表。
-        --则y[x] = [-x, -x + 1, ..., y - x - 1]
-        --y[3] = [-3, -2, -1, 0, 1, 2]
-        distance = (idx + i - 1)
-        if i == room.player_size then
-            distance = 0
+    local tbl = table.copy(room.players)
+    local role_tbl = table.merge(tbl, room.mid_players)
+    
+    local is_full = room_is_full(room)
+    local distance
+    if is_full then
+        distance = 1
+    end
+    
+    local visit_player_size = visit_player_size(player) 
+    for i, role in pairs(role_tbl) do
+        if not is_full then
+            distance = i - visit_player_size
         end
-        player:send(init_msg(role, distance, i, is_visit))   --坐下玩家的人数加一取负，减去i
+        player:send(init_msg(role, distance, i, is_visit))
     end
     LLOG("visit room succ, room_id: %d, pid: %d", room.id, player.id)
 end
 
-MSG_REG[msg.ENTER] = function(player, room_id)  --TODO  正常进入，观战进入，观战坐下
-    if player.room and player.visit_size == nil then
+local function send_enter_init(player, visit_sit_down)
+    local room = player.room
+    local idx
+    if room.start_count == 0 or (visit_sit_down and not room.gaming) then --正常进入，或者中途加入的时候，游戏没开始
+        for i = 1, room.player_size do
+            if room.players[i] == nil then
+                room.players[i] = player
+                idx = i
+                break
+            end
+        end
+    else
+        for i = 1, room.player_size do
+            if room.players[i] == nil and room.mid_players[i] == nil then
+                room.mid_players[i] = player
+                idx = i
+                break
+            end
+        end
+        player.info.is_mid_enter = true
+    end
+    
+    for i, role in pairs(room.players) do
+        if role ~= player then
+            role:send(init_msg(player, idx - i, idx))
+        end
+        if not visit_sit_down then
+            player:send(init_msg(role, i - idx, i))
+        end
+    end
+    
+    for i, role in pairs(room.mid_players) do
+        if role ~= player then
+            role:send(init_msg(player, idx - i, idx))
+        end
+    end
+    
+    if visit_sit_down then
+        player:send(init_msg(player, 1, 1, nil, nil, visit_sit_down))  --让客户端renter
+    
+        local distance
+        local player_size = table.length(room.players) + table.length(room.mid_players)
+        for role, _ in pairs(room.visit_players) do
+            distance = idx - visit_player_size(role)
+            if distance >= 0 then
+                distance = distance + 1
+            end
+            if player_size == room.player_size then  --玩家坐满，则将保留给自己视角的位置让出
+                distance = 0
+            end
+            role:send(init_msg(player, distance, i, nil, is_visit))
+        end
+    end
+end
+
+local function can_enter(statue, room)
+    local is_full
+    if statue.normal then
+        if room.gaming then --TODO  这里会有问题，应该用游戏局数判断
+            LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
+            return msg.ENTER, 6
+        end
+        is_full = room_is_full(room)
+    end
+    
+    if statue.is_visit then
+        is_full = visit_is_full(room)
+    end
+    
+    if statue.visit_sit_down then
+        is_full = room_is_full(room)
+    end
+    
+    if is_full then
+        return msg.ENTER, 4
+    end
+end
+
+local function get_statue(player, is_visit)
+    if not game.CAN_VISIT_ENTER then
+        return {normal = true}
+    end
+    
+    if is_visit ~= nil then
+        return {is_visit = true}
+    end
+    
+    if visit_check(player) then
+        return {visit_sit_down = true}
+    end
+end
+
+MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)  --TODO  正常进入，观战进入，观战坐下
+    if player.room and not game.CAN_VISIT_ENTER then
         LERR("enter room failed, already in room: %d, pid: %d", player.room.id, player.id)
         player:send(msg.ENTER, 1)
         return
     end
     
-    local visit_enter
-    if room_id == nil then
-        if game.CAN_VISIT_ENTER and visit_check(player) then
-            room_id = player.room.id
-            visit_enter = true
-        end
-    end 
+    local statue = get_statue(player, room_id)
+    if not statue then
+        return
+    end
+    
+    local visit_sit_down = statue.visit_sit_down
+    local is_visit = statue.is_visit
+    if visit_sit_down then
+        room_id = player.room.id
+    end
     
     local room = room_tbl[room_id]
     if not room then
@@ -431,12 +502,13 @@ MSG_REG[msg.ENTER] = function(player, room_id)  --TODO  正常进入，观战进
         return
     end
     
-    local enter, is_visit = can_visit_enter(player, room, visit_enter)
-    if not enter then
+    local protocol, error = can_enter(statue, room)
+    if protocol and error then
+        player:send(protocol, error)
         return
     end
     
-    if not visit_enter then   --不在房间里面的才发送
+    if not visit_sit_down then   --不是观战坐下才发送
         player:send(msg.ENTER, room:get_data(), is_visit) 
     else
         visit_del_role(player)
@@ -450,60 +522,7 @@ MSG_REG[msg.ENTER] = function(player, room_id)  --TODO  正常进入，观战进
     player.info = game.create_info(nil, room)
     player.room = room
     player.game_id = game_id
-    
-    local idx
-    if visit_enter and room.start_count > 0 then
-        player.info.is_mid_enter = true
-        for i = 1, room.player_size do
-            if room.players[i] == nil and room.mid_players[i] == nil then
-                idx = i
-                room.mid_players[i] = player
-                break
-            end
-        end
-    else
-        for i = 1, room.player_size do
-            if room.players[i] == nil then
-                idx = i
-                room.players[i] = player
-                break
-            end
-        end
-    end
-    
-    local player_size = table.length(room.players) + table.length(room.mid_players)
-    for i, role in pairs(room.players) do
-        if role ~= player then
-            if role.visit_size == nil then
-                role:send(init_msg(player, idx - i, idx))
-            else
-                --[-3, -2, -1, 0, 1, 2]
-                local distance = player_size - role.visit_size - 1
-                role:send(init_msg(player, distance, idx))--给从观战坐下的玩家发送
-            end
-        end
-        if not visit_enter then
-            player:send(init_msg(role, i - idx, i, is_visit))
-        end
-    end
-    
-    if visit_enter then
-        player:send(init_msg(player, 0, idx))
-    end
-    
-    for i, role in pairs(room.visit_players) do
-        --y = [-x, -x + 1, ..., y - x - 1]  x表示进入房间时坐下的人数
-        --假设座位表的索引为i, y[x][i - 1]为第几个人进入房间的位置(i = 1, ...)
-        --因为观战进入的时候，y[x][0] - y[x][x - 1]已经坐人了   
-        --y[x][j] + (x - j) = 0      [-3, -2, -1, 0, 1, 2]
-        --取y[x]中第一个人的位置，则y[x][0] + x = 0, 则-x + x = 0.
-        --所以当有玩家进入房间的时候，玩家总人数就会加一，会跳过位置0(需要给观战的人保留0位置，除非人数已经满了)
-        idx = -role.visit_size + player_size     --观战的时候进入的玩家人数取负加玩家总人数
-        if player_size == room.player_size then  --玩家坐满，则将保留给自己视角的位置让出
-            idx = 0
-        end
-        role:send(init_msg(player, idx, player_size, is_visit))
-    end
+    send_enter_init(player, visit_sit_down)
     LLOG("enter room success, room_id: %d, pid: %d", room_id, player.id)
 end
 
@@ -514,28 +533,31 @@ MSG_REG[msg.RENTER] = function(player)
         player:send(msg.RENTER)
         return
     end
-
-    local idx = table.index(room.players, player)
     
+    local idx
     local is_visit = visit_check(player)
-    if idx == nil and is_visit then
-        idx = -(table.length(room.players) + table.length(room.mid_players))
-    else
-        return
-    end
-
-    local distance
-    for i, role in pairs(room.players) do
-        distance = i - idx
-        if is_visit then
-            distance = idx + i - 1
-            if i == room.player_size then
-                distance = 0
-            end
+    if not is_visit then
+        if player.info.is_mid_enter then
+            idx = table.index(room.mid_players, player)
+        else
+            idx = table.index(room.players, player)
         end
-        player:send(init_msg(role, distance, i, role == room.zhuang, is_visit))
+    else
+        if room_is_full(room) then
+            idx = 1
+        else
+            idx = visit_player_size(player)
+        end
     end
-
+        
+    for i, role in pairs(room.players) do
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
+    end
+    
+    for i, role in pairs(room.mid_players) do
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
+    end
+    
     if not is_visit then
         room:broadcast_all(msg.OFFLINE, player.id, "")
         if room.dismiss_time ~= nil then
@@ -632,31 +654,31 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
 
-    if game.CAN_VISIT_ENTER and player.visit_size then
-        visit_del_role(player, true)
-        if room.host == player then
-            
-        else
-            return
-        end
-    end
-    
     if room.start_count > 0 then
         LERR("room:%d game is ready", room.id)
         return
     end
-
+    
+    local is_visit = visit_check(player)
+    if game.CAN_VISIT_ENTER and is_visit then
+        visit_del_role(player, true)
+        if player ~= room.host then
+            return
+        end
+    end
+    
     if room.host == player and not game.CAN_VISIT_ENTER then
         LERR("is room host by player: %d", player.id)
         return
     end
-
-    if player.info.is_ready then
-        MSG_REG[msg.READY](player, false)
+    
+    if not (is_visit and player == room.host) then
+        if player.info.is_ready then
+            MSG_REG[msg.READY](player, false)
+        end
     end
-
+    
     room:broadcast(msg.ROOM_OUT, player.id)
-
     for idx, role in pairs(room.players) do
         if role == player then
             room.players[idx] = nil
