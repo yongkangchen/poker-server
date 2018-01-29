@@ -238,7 +238,6 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     while room_tbl[room_gid] do
         room_gid = math.random(100000, ROOM_MAX_ID)
     end
-    room_gid = 000000
     room_tbl[room_gid] = room
 
     room.id = room_gid
@@ -654,11 +653,6 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
 
-    if room.start_count > 0 then
-        LERR("room:%d game is ready", room.id)
-        return
-    end
-    
     local is_visit = visit_check(player)
     if game.CAN_VISIT_ENTER and is_visit then
         visit_del_role(player, true)
@@ -667,15 +661,18 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         end
     end
     
+    if room.start_count > 0 then
+        LERR("room:%d game is ready", room.id)
+        return
+    end
+    
     if room.host == player and not game.CAN_VISIT_ENTER then
         LERR("is room host by player: %d", player.id)
         return
     end
     
-    if not (is_visit and player == room.host) then
-        if player.info.is_ready then
-            MSG_REG[msg.READY](player, false)
-        end
+    if player.info.is_ready then
+        MSG_REG[msg.READY](player, false)
     end
     
     room:broadcast(msg.ROOM_OUT, player.id)
