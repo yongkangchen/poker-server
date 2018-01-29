@@ -379,7 +379,7 @@ local function send_visit_init(player, room)
         if not is_full then
             distance = i - visit_player_size
         end
-        player:send(init_msg(role, distance, i, is_visit))
+        player:send(init_msg(role, distance, i, true))
     end
     LLOG("visit room succ, room_id: %d, pid: %d", room.id, player.id)
 end
