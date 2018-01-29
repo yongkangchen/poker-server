@@ -443,7 +443,6 @@ local function can_enter(statue, room)
     local is_full
     if statue.normal then
         if room.gaming then --TODO  这里会有问题，应该用游戏局数判断
-            LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
             return msg.ENTER, 6
         end
         is_full = room_is_full(room)
@@ -503,6 +502,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)  --TODO  正常进�
     
     local protocol, error = can_enter(statue, room)
     if protocol and error then
+        LERR("enter room failed, room_id: %d, pid: %d", room.id, player.id)
         player:send(protocol, error)
         return
     end
