@@ -364,9 +364,7 @@ end
 
 local function send_visit_init(player, room)
     visit_add_role(player, room)
-    
-    local tbl = table.copy(room.players)
-    local role_tbl = table.merge(tbl, room.mid_players)
+    local role_tbl = table.merge(table.copy(room.players), room.mid_players)
     
     local is_full = room_is_full(room)
     local distance
