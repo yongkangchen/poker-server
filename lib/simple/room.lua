@@ -666,11 +666,6 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
     
-    if room.host == player and not game.CAN_VISIT_ENTER then
-        LERR("is room host by player: %d", player.id)
-        return
-    end
-    
     if player.info.is_ready then
         MSG_REG[msg.READY](player, false)
     end
