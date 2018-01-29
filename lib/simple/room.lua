@@ -364,20 +364,11 @@ end
 
 local function send_visit_init(player, room)
     visit_add_role(player, room)
-    local role_tbl = table.merge(table.copy(room.players), room.mid_players)
     
-    local is_full = room_is_full(room)
-    local distance
-    if is_full then
-        distance = 1
-    end
-    
-    local visit_player_size = visit_player_size(player) 
+    local idx = room_is_full(room) and 1 or visit_player_size(player)
+    local role_tbl = table.merge(table.copy(room.players), room.mid_players) 
     for i, role in pairs(role_tbl) do
-        if not is_full then
-            distance = i - visit_player_size
-        end
-        player:send(init_msg(role, distance, i, true))
+        player:send(init_msg(role, i - idx, i, true))
     end
     LLOG("visit room succ, room_id: %d, pid: %d", room.id, player.id)
 end
