@@ -414,16 +414,17 @@ local function send_enter_init(player, visit_sit_down)
         player:send(init_msg(player, 1, 1, nil, nil, visit_sit_down))  --让客户端renter
     
         local distance
-        local player_size = table.length(room.players) + table.length(room.mid_players)
+        local is_full = room_is_full(room)
         for role, _ in pairs(room.visit_players) do
-            distance = idx - visit_player_size(role)
-            if distance >= 0 then
-                distance = distance + 1
-            end
-            if player_size == room.player_size then  --玩家坐满，则将保留给自己视角的位置让出
+            if not is_full then  
+                distance = idx - visit_player_size(role)
+                if distance >= 0 then
+                    distance = distance + 1
+                end
+            else--玩家坐满，则将保留给自己视角的位置让出
                 distance = 0
             end
-            role:send(init_msg(player, distance, i, nil, is_visit))
+            role:send(init_msg(player, distance, i, nil, true))
         end
     end
 end
