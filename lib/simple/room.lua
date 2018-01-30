@@ -370,6 +370,7 @@ local function send_visit_init(player, room)
     local role_tbl = table.merge(table.copy(room.players), room.mid_players) 
     for i, role in pairs(role_tbl) do
         player:send(init_msg(role, i - idx, i, true))
+        role:send(msg.VISITOR, {player.id = player.name})
     end
     
     --TODO  发送观战玩家数据
@@ -415,8 +416,9 @@ local function send_enter_init(player, visit_sit_down)
     end
     
     if visit_sit_down then
+        room:broadcast_all(msg.VISITOR, player.id)--TODO 对room.playback是否有影响
         player:send(init_msg(player, 1, 1, nil, nil, visit_sit_down))  --让客户端renter
-    
+        
         local distance
         local is_full = room_is_full(room)
         for role, _ in pairs(room.visit_players) do
@@ -542,6 +544,10 @@ MSG_REG[msg.RENTER] = function(player)
         else
             idx = visit_player_size(player)
         end
+        
+    end
+    
+    if game.CAN_VISIT_ENTER then
         player:send(msg.VISITOR, visit_get_player(player))
     end
         
