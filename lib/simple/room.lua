@@ -432,7 +432,7 @@ end
 local function can_enter(statue, room)
     local is_full
     if statue.normal then
-        if room.gaming then --TODO  这里会有问题，应该用游戏局数判断
+        if room.start_count > 0 then
             return msg.ENTER, 6
         end
         is_full = room_is_full(room)
@@ -465,7 +465,7 @@ local function get_statue(player, is_visit)
     end
 end
 
-MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)  --TODO  正常进入，观战进入，观战坐下
+MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)  --  正常进入，观战进入，观战坐下
     if player.room and not game.CAN_VISIT_ENTER then
         LERR("enter room failed, already in room: %d, pid: %d", player.room.id, player.id)
         player:send(msg.ENTER, 1)
