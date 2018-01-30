@@ -45,6 +45,19 @@ function visit.player_size(player)
     end
 end
 
+function visit.get_player(player)
+    local room = player.room
+    local count = 0
+    local visit_player = {}
+    for role in pairs(room.visit_players) do
+        if role ~= player then
+            count = count + 1
+            visit_player[role.id] = role.name
+        end
+    end
+    return visit_player, count
+end
+
 function visit.del_role(player, is_room_out)
     local room = player.room
     if not visit.check(player) then

@@ -25,6 +25,7 @@ local visit_add_role = visit.add_role
 local visit_del_role = visit.del_role
 local visit_is_full = visit.is_full
 local visit_player_size = visit.player_size
+local visit_get_player = visit.get_player
 
 local game
 local game_name
@@ -370,6 +371,9 @@ local function send_visit_init(player, room)
     for i, role in pairs(role_tbl) do
         player:send(init_msg(role, i - idx, i, true))
     end
+    
+    --TODO  发送观战玩家数据
+    player:send(msg.VISITOR, visit_get_player(player))
     LLOG("visit room succ, room_id: %d, pid: %d", room.id, player.id)
 end
 
@@ -425,6 +429,7 @@ local function send_enter_init(player, visit_sit_down)
                 distance = 0
             end
             role:send(init_msg(player, distance, i, nil, true))
+            role:send(msg.VISITOR, {player.id = player.name})
         end
     end
 end
@@ -537,6 +542,7 @@ MSG_REG[msg.RENTER] = function(player)
         else
             idx = visit_player_size(player)
         end
+        player:send(msg.VISITOR, visit_get_player(player))
     end
         
     for i, role in pairs(room.players) do
