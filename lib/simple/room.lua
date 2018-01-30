@@ -260,6 +260,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
+    room.create_data.can_visit_enter = game.CAN_VISIT_ENTER
     player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
 
     if room.create_data.host_start then
@@ -414,7 +415,6 @@ local function send_enter_init(player, visit_sit_down)
     end
 
     if visit_sit_down then
-        room:broadcast_all(msg.VISITOR, player.id)
         player:send(init_msg(player, 1, 1, nil, nil, true))
 
         local is_full = room_is_full(room)
@@ -483,7 +483,7 @@ local function visitor_enter(player, room_id) --  正常进入，观战进入，
 
     local is_visit = statue.is_visit
     if statue.visit_sit_down then
-        visit_del_role(player)
+        visit_del_role(player, true)
     else
         player:send(msg.ENTER, room:get_data(), is_visit)
     end

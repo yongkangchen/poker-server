@@ -1,3 +1,4 @@
+local msg = require "msg"
 local visit = {
     MAX_NUM = 20,
 }
@@ -52,14 +53,14 @@ function visit.get_player(player)
     return visit_player
 end
 
-function visit.del_role(player)
+function visit.del_role(player, is_sit)
     local room = player.room
     if not visit.check(player) then
         return
     end
     room.visit_players[player] = nil
     player.room = nil
-
+    room:broadcast_all(msg.VISITOR, player.id, is_sit)
     return true
 end
 
