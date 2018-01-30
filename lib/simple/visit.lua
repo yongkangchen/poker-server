@@ -1,9 +1,10 @@
+local msg = require "msg"
 local visit = {
     MAX_NUM = 20,
 }
 
 function visit.broadcast(room, ...)
-    for _, role in pairs(room.visit_players) do
+    for role, _ in pairs(room.visit_players) do
         role:send(...)
     end
 end
@@ -13,13 +14,13 @@ function visit.is_full(room)
 end
 
 function visit.check(player)
-    if table.index(player.room.visit_players, player) then
-        return player.room.players[1].id
+    if player.room.visit_players[player] then
+        return true
     end
 end
 
 function visit.clean(room, is_dismiss)
-    for _, role in pairs(room.visit_players) do
+    for role in pairs(room.visit_players) do
         if is_dismiss then
             role:send(is_dismiss)
         end
@@ -29,24 +30,37 @@ function visit.clean(room, is_dismiss)
 end
 
 function visit.add_role(player, room)
-    local i = 1
-    while true do
-        if room.visit_players[i] == nil then
-            room.visit_players[i] = player
-            break
-        end
-        i = i + 1
+    room.visit_players[player] = {
+        player_size = table.length(room.players) + table.length(room.mid_enter) + 1 --假设自己是进入房间的第x个人
+    }
+    player.room = room
+end
+
+function visit.player_size(player)
+    if visit.check(player) then
+        return player.room.visit_players[player].player_size
     end
 end
 
-function visit.del_role(player)
+function visit.get_player(player)
     local room = player.room
-    local idx = table.index(player.room.visit_players, player)
-    if not idx then
+    local visit_player = {}
+    for role in pairs(room.visit_players) do
+        if role ~= player then
+            visit_player[role.id] = role.name
+        end
+    end
+    return visit_player
+end
+
+function visit.del_role(player, is_sit)
+    local room = player.room
+    if not visit.check(player) then
         return
     end
-    room.visit_players[idx] = nil
+    room.visit_players[player] = nil
     player.room = nil
+    room:broadcast_all(msg.VISITOR, player.id, is_sit)
     return true
 end
 
