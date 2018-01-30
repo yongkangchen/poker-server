@@ -13,16 +13,13 @@ function visit.is_full(room)
 end
 
 function visit.check(player)
-    if player == nil then
-        return
-    end
     if player.room.visit_players[player] then
         return true
     end
 end
 
 function visit.clean(room, is_dismiss)
-    for role, _ in pairs(room.visit_players) do
+    for role in pairs(room.visit_players) do
         if is_dismiss then
             role:send(is_dismiss)
         end
@@ -32,11 +29,9 @@ function visit.clean(room, is_dismiss)
 end
 
 function visit.add_role(player, room)
-    if room.visit_players[player] == nil then
-        room.visit_players[player] = {
-            player_size = table.length(room.players) + table.length(room.mid_enter) + 1 --假设自己是进入房间的第x个人
-        }
-    end
+    room.visit_players[player] = {
+        player_size = table.length(room.players) + table.length(room.mid_enter) + 1 --假设自己是进入房间的第x个人
+    }
     player.room = room
 end
 
@@ -48,25 +43,23 @@ end
 
 function visit.get_player(player)
     local room = player.room
-    local count = 0
     local visit_player = {}
     for role in pairs(room.visit_players) do
         if role ~= player then
-            count = count + 1
             visit_player[role.id] = role.name
         end
     end
-    return visit_player, count
+    return visit_player
 end
 
-function visit.del_role(player, is_room_out)
+function visit.del_role(player)
     local room = player.room
     if not visit.check(player) then
         return
     end
     room.visit_players[player] = nil
     player.room = nil
-    
+
     return true
 end
 
