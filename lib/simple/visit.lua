@@ -16,7 +16,9 @@ function visit.check(player)
     if player == nil then
         return
     end
-    return player.room.visit_players[player]
+    if player.room.visit_players[player] then
+        return true
+    end
 end
 
 function visit.clean(room, is_dismiss)
@@ -39,9 +41,8 @@ function visit.add_role(player, room)
 end
 
 function visit.player_size(player)
-    local size = visit.check(player)
-    if size then
-        return size.player_size
+    if visit.check(player) then
+        return player.room.visit_players[player].player_size
     end
 end
 
