@@ -310,8 +310,8 @@ MSG_REG[msg.READY] = function(player, is_ready)
     room.ready_count = ready_count
 
     room:broadcast(msg.READY, player.id, is_ready, ready_count)
-
-    if ready_count == room.player_size then
+    
+    if ready_count == room.player_size and not room.create_data.host_start then
         start_game(room)
     elseif (game.CAN_MID_ENTER or game.CAN_VISIT_ENTER) and room.round > 1 and ready_count == table.length(room.players) then
         start_game(room)
@@ -363,16 +363,15 @@ local function room_is_full(room)
 end
 
 local function send_visit_init(player, room)
+    room:broadcast_all(msg.VISITOR, {{player.id, player.name, player.headimgurl}})
     visit_add_role(player, room)
 
     local idx = room_is_full(room) and 1 or visit_player_size(player)
     local role_tbl = table.merge(table.copy(room.players), room.mid_players)
     for i, role in pairs(role_tbl) do
         player:send(init_msg(role, i - idx, i, true))
-        role:send(msg.VISITOR, {[player.id] = player.name})
     end
-
-    player:send(msg.VISITOR, visit_get_player(player))
+    
     LLOG("visit room succ, room_id: %d, pid: %d", room.id, player.id)
 end
 
@@ -415,8 +414,8 @@ local function send_enter_init(player, visit_sit_down)
     end
 
     if visit_sit_down then
-        player:send(init_msg(player, 1, 1, nil, nil, true))
-
+        player:send(msg.VISITOR, player.id, true)
+        
         local is_full = room_is_full(room)
         for role in pairs(room.visit_players) do
             local distance
@@ -429,7 +428,6 @@ local function send_enter_init(player, visit_sit_down)
                 distance = 0 --玩家坐满，则将保留给自己视角的位置让出
             end
             role:send(init_msg(player, distance, idx, nil, true))
-            role:send(msg.VISITOR, {[player.id] = player.name})
         end
     end
 end
@@ -483,7 +481,7 @@ local function visitor_enter(player, room_id) --  正常进入，观战进入，
 
     local is_visit = statue.is_visit
     if statue.visit_sit_down then
-        visit_del_role(player, true)
+        visit_del_role(player)
     else
         player:send(msg.ENTER, room:get_data(), is_visit)
     end
@@ -546,7 +544,6 @@ local function send_ask(room, player, ask_data)
 
     player:send(msg.MID_ENTER, room_data, ask_data)
 end
-
 
 MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter)
     if game.CAN_VISIT_ENTER then
@@ -642,7 +639,7 @@ MSG_REG[msg.RENTER] = function(player)
         player:send(msg.RENTER)
         return
     end
-
+    
     local idx
     local is_visit = visit_check(player)
     if not is_visit then
@@ -755,7 +752,7 @@ MSG_REG[msg.DISMISS] = function(player)
         LERR("is not room host by player: %d", player.id)
         return
     end
-
+    
     room:broadcast(msg.DISMISS)
     room:delete()
 end
