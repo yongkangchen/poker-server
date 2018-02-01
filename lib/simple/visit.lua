@@ -14,7 +14,7 @@ function visit.is_full(room)
 end
 
 function visit.check(player)
-    if player.room.visit_players[player] then
+    if player.room and player.room.visit_players[player] then
         return true
     end
 end
@@ -46,21 +46,19 @@ function visit.get_player(player)
     local room = player.room
     local visit_player = {}
     for role in pairs(room.visit_players) do
-        if role ~= player then
-            visit_player[role.id] = role.name
-        end
+        table.insert(visit_player, {role.id, role.name, role.headimgurl})
     end
     return visit_player
 end
 
-function visit.del_role(player, is_sit)
+function visit.del_role(player)
     local room = player.room
     if not visit.check(player) then
         return
     end
     room.visit_players[player] = nil
     player.room = nil
-    room:broadcast_all(msg.VISITOR, player.id, is_sit)
+    room:broadcast_all(msg.VISITOR, player.id)
     return true
 end
 
