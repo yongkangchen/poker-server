@@ -96,6 +96,8 @@ local function get_room_data(room)
     data.start_count = room.start_count
     data.game_name = game_name
     data.gaming = room.gaming
+    data.can_visit_enter = room.can_visit_enter
+    data.auto_start_type = room.auto_start_type
     if game.init_room_data then
         game.init_room_data(room, data)
     end
@@ -260,7 +262,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.delete = delete_room
     room.end_game = end_game
     room.init_msg = init_msg
-    room.create_data.can_visit_enter = game.CAN_VISIT_ENTER
+    room.can_visit_enter = game.CAN_VISIT_ENTER
     player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
 
     if room.create_data.host_start then
@@ -311,7 +313,11 @@ MSG_REG[msg.READY] = function(player, is_ready)
 
     room:broadcast(msg.READY, player.id, is_ready, ready_count)
 
-    if ready_count == room.player_size then
+    if room.round == 1 and room.auto_start_type then
+        if ready_count == room.auto_start_type then
+            start_game(room)
+        end
+    elseif ready_count == room.player_size then
         start_game(room)
     elseif (game.CAN_MID_ENTER or game.CAN_VISIT_ENTER) and room.round > 1 and ready_count == table.length(room.players) then
         start_game(room)
@@ -337,18 +343,30 @@ MSG_REG[msg.START_GAME] = function(player)
         return
     end
 
-    if room.host ~= player then
-        LERR("start game failed, player is not host, room_id: %d, pid: %d", room.id, player.id)
+    if room.auto_start_type then
+        if room.auto_start_type ~= 1  then
+            LERR("start game failed, auto start_room, room_id: %d, pid: %d", room.id, player.id)
+            return
+        end
+
+        if player.id ~= room.host.id then
+            LERR("start game failed, player is not host, room_id: %d, pid: %d", room.id, player.id)
+            return
+        end
+    else
+        if room.players[1] ~= player then
+            LERR("start game failed, player is not first player, room_id: %d, pid: %d", room.id, player.id)
+            return
+        end
+    end
+
+    if room.ready_count < 2 then
+        LERR("start game failed, ready_count < 2, room_id: %d, pid: %d", room.id, player.id)
         return
     end
 
     if room.ready_count ~= table.length(room.players) then
         LERR("start game failed, not all ready, room_id: %d, pid: %d", room.id, player.id)
-        return
-    end
-
-    if room.ready_count < 2 then
-        LERR("start game failed, ready_count < 2, room_id: %d, pid: %d", room.id, player.id)
         return
     end
 
