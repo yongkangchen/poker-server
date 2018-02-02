@@ -520,6 +520,13 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
 
         player.info = game.create_info(nil, room)
         player.info.is_mid_enter = true
+    elseif is_visit then
+        if ask_data == nil or not ask_data.can_visit then
+            player:send(msg.ENTER, 4)
+            return
+        end
+        visit_add_role(player, room)
+        idx = room_is_full(room) and 1 or visit_player_idx(player)
     elseif is_ask then
         send_ask(room, player, ask_data)
         return
@@ -700,6 +707,7 @@ MSG_REG[msg.ROOM_OUT] = function(player)
     end
 
     if visit_del_role(player) then
+        player:send(msg.ROOM_OUT, player.id)
         return
     end
 
@@ -708,11 +716,17 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
 
+    if room.host.id == player.id then
+        LERR("is room host by player: %d", player.id)
+        return
+    end
+
     if player.info.is_ready then
         MSG_REG[msg.READY](player, false)
     end
 
-    room:broadcast(msg.ROOM_OUT, player.id)
+    room:broadcast_all(msg.ROOM_OUT, player.id)
+
     for idx, role in pairs(room.players) do
         if role == player then
             room.players[idx] = nil
