@@ -490,10 +490,6 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         return
     end
 
-    if not game.CAN_VISIT_ENTER then
-        is_visit = nil
-    end
-
     if not game.CAN_MID_ENTER then
         is_mid_enter = nil
     end
@@ -501,6 +497,12 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     local is_ask, ask_data, is_full = should_ask(room, player.id)
     if is_mid_enter and not room.gaming then
         is_mid_enter = nil
+    end
+
+    if not game.CAN_VISIT_ENTER then
+        is_visit = nil
+    elseif is_mid_enter == nil and is_visit == nil then
+        is_visit = true
     end
 
     local idx
