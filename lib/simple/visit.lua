@@ -4,7 +4,7 @@ local visit = {
 }
 
 function visit.broadcast(room, ...)
-    for role, _ in pairs(room.visit_players) do
+    for role in pairs(room.visit_players) do
         role:send(...)
     end
 end
@@ -19,26 +19,23 @@ function visit.check(player)
     end
 end
 
-function visit.clean(room, is_dismiss)
+function visit.clean(room)
     for role in pairs(room.visit_players) do
-        if is_dismiss then
-            role:send(is_dismiss)
-        end
-        role.room = nil
+        table.insert(room.players, role)
     end
     room.visit_players = {}
 end
 
 function visit.add_role(player, room)
     room.visit_players[player] = {
-        player_size = table.length(room.players) + table.length(room.mid_enter) + 1 --假设自己是进入房间的第x个人
+        player_idx = table.length(room.players) + table.length(room.mid_enter) + 1 --假设自己是进入房间的第x个人
     }
     player.room = room
 end
 
-function visit.player_size(player)
+function visit.player_idx(player)
     if visit.check(player) then
-        return player.room.visit_players[player].player_size
+        return player.room.visit_players[player].player_idx
     end
 end
 
@@ -60,7 +57,7 @@ function visit.del_role(player, is_sit)
     end
     room.visit_players[player] = nil
     player.room = nil
-    room:broadcast_all(msg.VISITOR, player.id, is_sit)
+    room:broadcast_all(msg.VISITOR_LIST, player.id, is_sit)
     return true
 end
 
