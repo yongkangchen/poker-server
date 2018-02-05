@@ -471,7 +471,7 @@ MSG_REG[msg.SIT_DOWN] = function(player)
         else
             distance = 0 --玩家坐满，则将保留给自己视角的位置让出
         end
-        role:send(init_msg(player, distance, idx, nil, true))
+        role:send(init_msg(player, distance, idx))
     end
 
     -- MSG_REG[msg.READY](player, true) --FIXME: 等查出玩法为什么自动准备？
@@ -566,7 +566,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         if not is_visit and role ~= player then
             role:send(init_msg(player, idx - i, idx))
         end
-        player:send(init_msg(role, i - idx, i, nil, is_visit))
+        player:send(init_msg(role, i - idx, i))
     end
 
     room:broadcast_all(msg.VISITOR_LIST, {[player.id] = player.name})
@@ -605,11 +605,11 @@ MSG_REG[msg.RENTER] = function(player)
     end
 
     for i, role in pairs(room.players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang))
     end
 
     for i, role in pairs(room.mid_players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang))
     end
 
     if not is_visit then
