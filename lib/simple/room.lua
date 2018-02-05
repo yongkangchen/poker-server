@@ -720,7 +720,7 @@ MSG_REG[msg.ROOM_OUT] = function(player)
         return
     end
 
-    if room.host.id == player.id then
+    if room.host.id == player.id and not room.group_id then
         LERR("is room host by player: %d", player.id)
         return
     end
