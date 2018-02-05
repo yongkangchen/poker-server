@@ -220,8 +220,6 @@ local function end_game(room, ...)
     end
 end
 
-        return
-    end
 
 MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     if game.NUM then
