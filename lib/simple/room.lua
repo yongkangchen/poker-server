@@ -449,13 +449,17 @@ MSG_REG[msg.SIT_DOWN] = function(player)
         return
     end
 
-    if not MSG_REG[msg.ENTER](player, room.id, true) then
+    if not MSG_REG[msg.ENTER](player, room.id, true, false) then
         visit_add_role(player, room)
         room:broadcast_all(msg.VISITOR_LIST, {[player.id] = player.name})
         return
     end
 
     local idx = table.index(room.players, player)
+    if not idx then
+        idx = table.index(room.mid_players, player)
+    end
+
     local is_full = room_is_full(room)
     for role in pairs(room.visit_players) do
         local distance
