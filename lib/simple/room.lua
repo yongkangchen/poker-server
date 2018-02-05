@@ -384,7 +384,7 @@ MSG_REG[msg.START_GAME] = function(player)
 end
 
 local function room_is_full(room)
-    local count = table.length(room.players) + table.length(room.mid_enter)
+    local count = table.length(room.players) + table.length(room.mid_players)
     if count >= room.player_size or (room.max_player_size and count >= room.max_player_size) then
         return true
     end
