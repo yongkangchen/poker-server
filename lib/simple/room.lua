@@ -699,7 +699,7 @@ MSG_REG[msg.DISMISS] = function(player)
         return
     end
 
-    room:broadcast(msg.DISMISS)
+    room:broadcast_all(msg.DISMISS)
     room:delete()
 end
 
