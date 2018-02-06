@@ -499,6 +499,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     local is_ask, ask_data, is_full = should_ask(room, player.id)
     if is_mid_enter and not room.gaming then
         is_mid_enter = nil
+        is_ask = nil
     end
 
     if not game.CAN_VISIT_ENTER then
@@ -569,7 +570,9 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         player:send(init_msg(role, i - idx, i))
     end
 
-    room:broadcast_all(msg.VISITOR_LIST, {[player.id] = player.name})
+    if is_visit then
+        room:broadcast_all(msg.VISITOR_LIST, {[player.id] = player.name})
+    end
     player:send(msg.VISITOR_LIST, visit_get_player(player))
 
     LLOG("enter room success, room_id: %d, pid: %d", room_id, player.id)

@@ -43,9 +43,7 @@ function visit.get_player(player)
     local room = player.room
     local visit_player = {}
     for role in pairs(room.visit_players) do
-        if role ~= player then
-            visit_player[role.id] = role.name
-        end
+        visit_player[role.id] = role.name
     end
     return visit_player
 end
