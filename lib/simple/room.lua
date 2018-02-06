@@ -125,6 +125,7 @@ local function init_playback(room)
 end
 
 local function start_game(room)
+    room:broadcast_all(msg.START_GAME)
     room.start_count = room.start_count + 1
     room.gaming = true
     game.start_room(room)
