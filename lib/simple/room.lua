@@ -54,7 +54,7 @@ end
 local function init_msg(player, distance, idx, is_zhuang, is_visitor)
     local player_info = player.info
     local hand = player_info.hand
-    if distance ~= 0 and hand and not is_visitor then
+    if hand and (distance ~= 0 or is_visitor) then
         hand = #hand
     end
     local data = {
@@ -125,11 +125,11 @@ local function init_playback(room)
 end
 
 local function start_game(room)
-    room:broadcast_all(msg.START_GAME)
     room.start_count = room.start_count + 1
     room.gaming = true
     game.start_room(room)
     init_playback(room)
+    room:broadcast_all(msg.START_GAME)
 end
 
 local function end_game(room, ...)
@@ -220,7 +220,6 @@ local function end_game(room, ...)
         room:delete()
     end
 end
-
 
 MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     if game.NUM then
@@ -460,24 +459,11 @@ MSG_REG[msg.SIT_DOWN] = function(player)
     if not idx then
         idx = table.index(room.mid_players, player)
     end
-
-    local is_full = room_is_full(room)
+    
     for role in pairs(room.visit_players) do
-        local distance
-        if not is_full then
-            distance = idx - visit_player_idx(role)
-            if distance >= 0 then
-                distance = distance + 1
-            end
-        else
-            distance = 0 --玩家坐满，则将保留给自己视角的位置让出
-        end
-        role:send(init_msg(player, distance, idx))
+        role:send(init_msg(player, idx - visit_player_idx(role), idx, nil, true))
     end
-
-    -- MSG_REG[msg.READY](player, true) --FIXME: 等查出玩法为什么自动准备？
 end
-
 
 MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
     if player.room then
@@ -568,7 +554,7 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         if not is_visit and role ~= player then
             role:send(init_msg(player, idx - i, idx))
         end
-        player:send(init_msg(role, i - idx, i))
+        player:send(init_msg(role, i - idx, i, nil, is_visit))
     end
 
     if is_visit then
@@ -609,11 +595,11 @@ MSG_REG[msg.RENTER] = function(player)
     end
 
     for i, role in pairs(room.players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
     end
 
     for i, role in pairs(room.mid_players) do
-        player:send(init_msg(role, i - idx, i, role == room.zhuang))
+        player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
     end
 
     if not is_visit then
