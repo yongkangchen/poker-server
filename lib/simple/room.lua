@@ -466,6 +466,7 @@ MSG_REG[msg.SIT_DOWN] = function(player)
     for role in pairs(room.visit_players) do
         role:send(init_msg(player, idx - visit_player_idx(role), idx, nil, true))
     end
+    MSG_REG[msg.READY](player, true)
 end
 
 MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
