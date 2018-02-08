@@ -275,7 +275,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.can_visit_enter = game.CAN_VISIT_ENTER
     player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
 
-    if room.create_data.host_start then
+    if room.can_visit_enter then
         visit_add_role(player, room)
     else
         player.room = room
