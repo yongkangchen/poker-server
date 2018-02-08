@@ -324,6 +324,9 @@ MSG_REG[msg.READY] = function(player, is_ready)
     room:broadcast(msg.READY, player.id, is_ready, ready_count)
 
     if room.round == 1 and room.auto_start_type then
+        if room.auto_start_type == 1 then
+            return
+        end
         if ready_count == room.auto_start_type then
             start_game(room)
         end
