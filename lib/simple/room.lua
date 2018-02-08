@@ -354,7 +354,7 @@ MSG_REG[msg.START_GAME] = function(player)
     end
 
     if room.auto_start_type then
-        if room.auto_start_type ~= 1  then
+        if room.auto_start_type ~= -1  then
             LERR("start game failed, auto start_room, room_id: %d, pid: %d", room.id, player.id)
             return
         end
