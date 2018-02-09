@@ -273,9 +273,10 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.end_game = end_game
     room.init_msg = init_msg
     room.can_visit_enter = game.CAN_VISIT_ENTER
+    
     player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
-
     if room.can_visit_enter then
+        player:send(msg.VISITOR_LIST, {[player.id] = player.name})
         visit_add_role(player, room)
     else
         player.room = room
@@ -320,9 +321,12 @@ MSG_REG[msg.READY] = function(player, is_ready)
        ready_count = room.ready_count - 1
     end
     room.ready_count = ready_count
-
+    
     room:broadcast(msg.READY, player.id, is_ready, ready_count)
-
+    if room.auto_start_type and room.auto_start_type == -1 then
+        room.host:send(msg.READY, player.id, is_ready, ready_count)
+    end
+    
     if room.round == 1 and room.auto_start_type then
         if ready_count == room.auto_start_type then
             start_game(room)
