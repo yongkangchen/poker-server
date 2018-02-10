@@ -398,7 +398,7 @@ local function should_ask(room, player_id)
     local is_full = room_is_full(room)
 
     local can_mid_enter = false
-    if game.CAN_MID_ENTER then
+    if game.CAN_MID_ENTER and not room.start_stop_enter then
         can_mid_enter = not is_full
     end
 
