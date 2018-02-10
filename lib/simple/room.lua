@@ -322,8 +322,11 @@ MSG_REG[msg.READY] = function(player, is_ready)
     end
     room.ready_count = ready_count
 
-    room:broadcast_all(msg.READY, player.id, is_ready, ready_count)
-
+    room:broadcast(msg.READY, player.id, is_ready, ready_count)
+    if room.auto_start_type and room.auto_start_type == -1 then
+        room.host:send(msg.READY, player.id, is_ready, ready_count)
+    end
+    
     if room.round == 1 and room.auto_start_type then
         if ready_count == room.auto_start_type then
             start_game(room)
@@ -395,7 +398,7 @@ local function should_ask(room, player_id)
     local is_full = room_is_full(room)
 
     local can_mid_enter = false
-    if game.CAN_MID_ENTER or room.can_mid_enter then
+    if game.CAN_MID_ENTER then
         can_mid_enter = not is_full
     end
 
