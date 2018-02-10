@@ -274,7 +274,7 @@ MSG_REG[msg.CREATE] = function(player, _, create_tbl, num, ...)
     room.init_msg = init_msg
     room.can_visit_enter = game.CAN_VISIT_ENTER
     
-    player:send(msg.CREATE, room:get_data())  --这个可以不需要，客户端那边可以判断
+    player:send(msg.CREATE, room:get_data())  
     if room.can_visit_enter then
         player:send(msg.VISITOR_LIST, {[player.id] = player.name})
         visit_add_role(player, room)
@@ -321,12 +321,9 @@ MSG_REG[msg.READY] = function(player, is_ready)
        ready_count = room.ready_count - 1
     end
     room.ready_count = ready_count
-    
-    room:broadcast(msg.READY, player.id, is_ready, ready_count)
-    if room.auto_start_type and room.auto_start_type == -1 then
-        room.host:send(msg.READY, player.id, is_ready, ready_count)
-    end
-    
+
+    room:broadcast_all(msg.READY, player.id, is_ready, ready_count)
+
     if room.round == 1 and room.auto_start_type then
         if ready_count == room.auto_start_type then
             start_game(room)
@@ -398,7 +395,7 @@ local function should_ask(room, player_id)
     local is_full = room_is_full(room)
 
     local can_mid_enter = false
-    if game.CAN_MID_ENTER then
+    if game.CAN_MID_ENTER or room.can_mid_enter then
         can_mid_enter = not is_full
     end
 
@@ -476,14 +473,20 @@ MSG_REG[msg.ENTER] = function(player, room_id, is_mid_enter, is_visit)
         player:send(msg.ENTER, 1)
         return
     end
-
+    
     local room = room_tbl[room_id]
     if not room then
         LLOG("enter room failed, invalid room_id: %d, pid: %d", room_id, player.id)
         player:send(msg.ENTER, 2)
         return
     end
-
+    
+    if room.start_count > 0 and room.start_stop_enter then
+        LERR("enter room failed, is gaming, room_id: %d, pid: %d", room.id, player.id)
+        player:send(msg.ENTER, 6)
+        return
+    end
+    
     if not game.CAN_MID_ENTER then
         is_mid_enter = nil
     end
