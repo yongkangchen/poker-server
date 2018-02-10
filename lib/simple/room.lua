@@ -95,6 +95,7 @@ local function get_room_data(room)
     data.gaming = room.gaming
     data.can_visit_enter = room.can_visit_enter
     data.auto_start_type = room.auto_start_type
+    data.stop_mid_enter = room.stop_mid_enter
     if game.init_room_data then
         game.init_room_data(room, data)
     end
@@ -398,7 +399,7 @@ local function should_ask(room, player_id)
     local is_full = room_is_full(room)
 
     local can_mid_enter = false
-    if game.CAN_MID_ENTER and not room.start_stop_enter then
+    if game.CAN_MID_ENTER and not room.stop_mid_enter then
         can_mid_enter = not is_full
     end
 
