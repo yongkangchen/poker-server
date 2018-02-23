@@ -608,15 +608,12 @@ MSG_REG[msg.RENTER] = function(player)
         player:send(init_msg(role, i - idx, i, role == room.zhuang, is_visit))
     end
 
-    if not is_visit then
-        room:broadcast_all(msg.OFFLINE, player.id, "")
-
-        if room.dismiss_time ~= nil then
-            player:send(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time())
-        end
-
-        game.renter(room, player)
+    room:broadcast_all(msg.OFFLINE, player.id, "")
+    if room.dismiss_time ~= nil and not is_visit then
+        player:send(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time())
     end
+
+    game.renter(room, player)
     LLOG("re enter room success, room_id: %d, pid: %d", room.id, player.id)
 end
 
