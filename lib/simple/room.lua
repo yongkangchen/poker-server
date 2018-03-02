@@ -219,6 +219,10 @@ local function end_game(room, ...)
     room.mid_players = {}
     if is_over then
         room:delete()
+    else
+        if room.dismiss_time ~= nil then
+            room:broadcast(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time(), true)
+        end
     end
 end
 
