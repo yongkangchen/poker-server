@@ -206,6 +206,12 @@ local function end_game(room, ...)
         if not room.history_save[role.id] then
             room.history_save[role.id] = true
         end
+        
+        if room.dismiss_time ~= nil and not is_over then
+            for _, mid_role in pairs(room.mid_players) do
+                role:send(msg.APPLY, nil, nil, true, mid_role.id)
+            end
+        end
     end
 
     for idx, role in pairs(room.mid_players) do
@@ -213,6 +219,10 @@ local function end_game(room, ...)
         room.players[idx] = role
         if is_over then
             role:send(msg.DISMISS)
+        else
+            if room.dismiss_time ~= nil then
+                role:send(msg.APPLY, room.dismiss_tbl, room.dismiss_time - os.time())
+            end
         end
     end
 
