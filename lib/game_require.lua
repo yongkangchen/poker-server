@@ -17,6 +17,7 @@ table.is_same_day
 table.merge
 table.dump
 string.split
+_G.check_hu
 ]]
 
 local sandbox = require "sandbox"
