@@ -1,8 +1,7 @@
 local require_api = {
     "log", 
     "timer",
-    "msg",
-    "zphu"
+    "msg"
 }
 
 --allow from ext.lua
