@@ -32,10 +32,10 @@ end
 local function init_player(pid)
 	local player_data = {}
 	player_data.id = pid
-	
+
 	player_data.name = "test-" .. pid
 	player_data.sex = 1
-	
+
 	player_data.send = function(self, pt, ...)
 		LTRACE("send msg: 0x%08x, pid: %d, msg: %s,", pt, self.id, table.dump({...}))
 		self.client:send(pt, ...)
@@ -48,7 +48,7 @@ local function load_player(pid)
 	if not pid then
 		return
 	end
-	
+
 	local player = player_tbl[pid]
 	if not player then
 		player = init_player(pid)
@@ -69,12 +69,12 @@ MSG_REG[msg.LOGIN] = function(client, pid, ...)
 		g_pid = g_pid + 1
         LLOG("create account success, pid: %s", pid)
     end
-    
+
     local player = load_player(pid)
 	if player.client then
 		player.client:close()
 	end
-	
+
 	player.client = client
 	client.agent = player
 	if test_on_login then

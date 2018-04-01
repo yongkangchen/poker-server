@@ -65,7 +65,7 @@ function table.length(tbl)
     if tbl == nil then
         return 0
     end
-    
+
     local n = 0
     for _ in pairs(tbl) do
         n = n + 1
@@ -114,4 +114,3 @@ function table.merge(dst, src)
     end
     return dst
 end
-

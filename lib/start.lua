@@ -45,7 +45,7 @@ local function msg_handle(agent, pt, ...)
         return
     end
     LTRACE("recv msg, pid: %d, type: 0x%08x, %s", agent.id or 0, pt, table.dump{...})
-    
+
     if pt > 0x0010 and agent.id == nil then
         LERR("invalid pack, type: 0x%08x, sid: 0x%08x", pt, agent.sid or 0)
         return
@@ -60,10 +60,10 @@ return function(port)
     require "tcp_svr".start("0.0.0.0", port, function(client)
     	coroutine.wrap(function()
             LLOG("accept, fd: %s, ip: %s, port: %s", client.fd, client.ip, client.port)
-            
+
             client.send = msg_send
             client.agent = client
-            
+
     		while true do
                 local msg = table.undump(client:read_line())
     			local size = table.maxn(msg)
@@ -71,7 +71,7 @@ return function(port)
     				local ok, err = xpcall(msg_handle, debug_traceback, client.agent, unpack(msg, 1, size))
     				if not ok then
     					LERR("handler error: %s", debug_traceback(err))
-    				end	
+    				end
     			else
     				LERR("invalid size: " .. size)
     			end
