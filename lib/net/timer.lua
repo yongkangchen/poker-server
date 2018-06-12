@@ -31,8 +31,10 @@ local LERR = require "log".error
 
 local timer = {}
 local time_wheel = {}
+local current_time = os.time
+
 function timer.add_timeout(sec, func)
-	local time = os.time() + sec
+	local time = current_time() + sec
 	local pool = time_wheel[time]
 	if not pool then
 		pool = {}
@@ -45,8 +47,12 @@ local function compare_time(a, b)
 	return a.time < b.time
 end
 
+function timer.set_mstime()
+	current_time = os.clock
+end
+
 function timer.update()
-	local now = os.time()
+	local now = current_time()
 	local wait = -1
 	local execute_tbl = {}
 	for time, tbl in pairs(time_wheel) do
