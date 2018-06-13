@@ -31,10 +31,9 @@ local LERR = require "log".error
 
 local timer = {}
 local time_wheel = {}
-local current_time = os.time
 
-function timer.add_timeout(sec, func)
-	local time = current_time() + sec
+local getmstime = os.clock
+local function add_timeout(time, func)
 	local pool = time_wheel[time]
 	if not pool then
 		pool = {}
@@ -43,19 +42,50 @@ function timer.add_timeout(sec, func)
 	table_insert(pool, coroutine.wrap(func))
 end
 
+function timer.add_timeout(sec, func)
+	add_timeout(os.time() + sec, func)
+end
+
 local function compare_time(a, b)
 	return a.time < b.time
 end
 
-function timer.set_mstime()
-	current_time = os.clock
+if jit.os == "OSX" or jit.os == "Linux" then
+    local ffi = require("ffi")
+  
+    ffi.cdef[[
+      typedef long time_t;
+      typedef struct timeval {
+        time_t tv_sec;
+        time_t tv_usec;
+      } timeval;
+
+      int gettimeofday(struct timeval* t, void* tzp);
+    ]]
+
+    local t = ffi.new("timeval")
+    local gettimeofday = ffi.C.gettimeofday
+    getmstime = function()
+      gettimeofday(t, nil)
+      return tonumber(t.tv_sec) + tonumber(t.tv_usec)/1000.0/1000.0
+    end 
+end
+
+function timer.enable_mstime()
+	if timer.add_mtimeout then
+		return
+	end
+	
+	timer.add_mtimeout = function(sec, func)
+		add_timeout(getmstime() + sec, func)
+	end
 end
 
 function timer.update()
-	local now = current_time()
 	local wait = -1
 	local execute_tbl = {}
 	for time, tbl in pairs(time_wheel) do
+		local now = math.ceil(time) == time and os.time() or getmstime()
 		local diff = (time - now) * 1000
 		if diff > 0 then
 			if wait == -1 then
