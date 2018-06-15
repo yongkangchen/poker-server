@@ -114,3 +114,37 @@ function table.merge(dst, src)
     end
     return dst
 end
+
+local function chsize(char)
+    if not char then
+        return 0
+    elseif char > 240 then
+        return 4
+    elseif char > 225 then
+        return 3
+    elseif char > 192 then
+        return 2
+    else
+        return 1
+    end
+end
+
+function string.utf8sub(str, startChar, numChars)
+    local startIndex = 1
+    while startChar > 1 do
+        local char = string.byte(str, startIndex)
+        local size = chsize(char)
+        startIndex = startIndex + size
+        startChar = startChar - (size > 1 and 2 or size)
+    end
+
+    local currentIndex = startIndex
+
+    while numChars > 0 and currentIndex <= #str do
+        local char = string.byte(str, currentIndex)
+        local size = chsize(char)
+        currentIndex = currentIndex + size
+        numChars = numChars - (size > 1 and 2 or size)
+    end
+    return str:sub(startIndex, currentIndex - 1)
+end
