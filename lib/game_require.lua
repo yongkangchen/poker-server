@@ -64,5 +64,24 @@ sandbox.set_env("MSG_REG", setmetatable({}, {
 return function(_game_name, _game_path)
     game_path = _game_path
     game_loaded = {}
+
+    do
+        local log = require "log"
+        local LERR = log.error
+        local msg = require "msg"
+        local val_tbl = {}
+        for k, v in pairs(game_require "game_msg") do
+            if msg[k] == nil then
+                if val_tbl[v] then
+                    LERR("!!! duplicate val in game_msg, k: %s => cur: %s, v: 0x%08x", k, val_tbl[v], v)
+                end
+                msg[k] = v
+                val_tbl[v] = k
+            else
+                LERR("!!! duplicate key in game_msg, k: %s, v: 0x%08x => cur: 0x%08x", k, v, msg[k])
+            end
+        end
+    end
+
     return game_require(_game_name)
 end
