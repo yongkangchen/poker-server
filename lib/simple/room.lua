@@ -327,10 +327,7 @@ MSG_REG[msg.READY] = function(player, is_ready)
     end
     room.ready_count = ready_count
 
-    room:broadcast(msg.READY, player.id, is_ready, ready_count)
-    if room.auto_start_type and room.auto_start_type == -1 then
-        room.host:send(msg.READY, player.id, is_ready, ready_count)
-    end
+    room:broadcast_all(msg.READY, player.id, is_ready, ready_count)
 
     if room.round == 1 and room.auto_start_type then
         if ready_count == room.auto_start_type then
