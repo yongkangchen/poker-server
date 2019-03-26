@@ -33,7 +33,7 @@ local function init_player(pid)
 	local player_data = {}
 	player_data.id = pid
 
-	player_data.name = "test-" .. pid
+	player_data.name = "id-" .. pid
 	player_data.sex = 1
 
 	player_data.send = function(self, pt, ...)

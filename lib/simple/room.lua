@@ -86,6 +86,7 @@ local function get_room_data(room)
         data = {}
     end
     data.id = room.id
+    data.type = room.type
     data.round = room.round
     data.max_round = room.max_round
     data.player_size = room.player_size

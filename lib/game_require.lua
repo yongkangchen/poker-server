@@ -43,7 +43,7 @@ local function game_require(name)
         return mod
     end
 
-    local path = game_path .. "/" .. name .. ".lua"
+    local path = game_path .. "/" .. name:gsub("%.", "/") .. ".lua"
     local f = loadfile(path)
     assert(f, "module '" .. path .. "' not found")
     mod = sandbox.run(f)
